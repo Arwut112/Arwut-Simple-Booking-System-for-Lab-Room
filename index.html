@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ระบบจองห้องปฏิบัติการ สาขาวิชาวิศวกรรมคอมพิวเตอร์ มหาวิทยาลัยกาฬสินธุ์" />
+  <title>Lab Room Booking System — CE KSU</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Tailwind CSS (CDN for simple prototype) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            crimson: {
+              DEFAULT: '#dc143c',
+              dark: '#b01030',
+              light: '#e64563'
+            },
+            chalk: {
+              DEFAULT: '#f2efe7',
+              dark: '#e0dbcf'
+            }
+          },
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans Thai"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS components -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-chalk text-gray-800 antialiased min-h-screen flex flex-col font-sans">
+  
+  <div id="app" class="flex-1 flex flex-col w-full h-full">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200" id="navbar">
+      <div class="container mx-auto px-4 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          
+          <!-- Brand -->
+          <a class="flex items-center gap-3 cursor-pointer group" onclick="navigate('home')">
+            <div class="bg-crimson text-white w-10 h-10 flex items-center justify-center rounded-lg shadow-sm group-hover:bg-crimson-dark transition-colors text-xl">🔬</div>
+            <div class="flex flex-col leading-tight">
+              <span class="font-bold text-gray-900 text-lg group-hover:text-crimson transition-colors">CE Lab Booking</span>
+              <span class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">มหาวิทยาลัยกาฬสินธุ์</span>
+            </div>
+          </a>
+
+          <!-- Desktop Links -->
+          <div class="hidden md:flex items-center space-x-1" id="navLinks">
+            <a class="nav-link" href="#home" onclick="navigate('home')" id="nl-home">หน้าหลัก</a>
+            <a class="nav-link" href="#rooms" onclick="navigate('rooms')" id="nl-rooms">ห้องปฏิบัติการ</a>
+            <a class="nav-link" href="#schedule" onclick="navigate('schedule')" id="nl-schedule">ตารางการจอง</a>
+            <a class="nav-link" href="#my-bookings" onclick="navigate('my-bookings')" id="nl-my-bookings">การจองของฉัน</a>
+            
+            <!-- Admin Links -->
+            <div id="adminNavLinks" class="hidden flex items-center space-x-1 pl-4 border-l border-gray-300 ml-2">
+              <a class="nav-link text-crimson hover:bg-red-50" href="#admin-dashboard" onclick="navigate('admin-dashboard')" id="nl-admin-dashboard">📊 Dashboard</a>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-3">
+            <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+              <button class="role-btn role-btn-active" id="roleUser" onclick="setRole('user')">👤 User</button>
+              <button class="role-btn role-btn-inactive" id="roleAdmin" onclick="setRole('admin')">🛡️ Admin</button>
+            </div>
+            
+            <!-- Mobile Menu Toggle -->
+            <button class="md:hidden p-2 text-gray-600 hover:text-crimson focus:outline-none" onclick="toggleMobileMenu()">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Menu -->
+      <div id="mobileMenu" class="hidden md:hidden bg-white border-b border-gray-200 px-4 pt-2 pb-4 space-y-1 shadow-lg absolute w-full z-50">
+        <a href="#home" class="block px-3 py-2 rounded-md font-medium text-gray-700 hover:text-crimson hover:bg-gray-50" onclick="navigate('home')">หน้าหลัก</a>
+        <a href="#rooms" class="block px-3 py-2 rounded-md font-medium text-gray-700 hover:text-crimson hover:bg-gray-50" onclick="navigate('rooms')">ห้องปฏิบัติการ</a>
+        <a href="#schedule" class="block px-3 py-2 rounded-md font-medium text-gray-700 hover:text-crimson hover:bg-gray-50" onclick="navigate('schedule')">ตารางการจอง</a>
+        <a href="#my-bookings" class="block px-3 py-2 rounded-md font-medium text-gray-700 hover:text-crimson hover:bg-gray-50" onclick="navigate('my-bookings')">การจองของฉัน</a>
+        
+        <div id="mobileAdminLinks" class="hidden border-t border-gray-200 mt-2 pt-2">
+          <p class="px-3 py-1 text-xs font-bold text-gray-400 uppercase tracking-wider">Admin Menu</p>
+          <a href="#admin-dashboard" class="block px-3 py-2 rounded-md font-medium text-crimson hover:bg-red-50" onclick="navigate('admin-dashboard')">📊 Dashboard</a>
+          <a href="#admin-bookings" class="block px-3 py-2 rounded-md font-medium text-crimson hover:bg-red-50" onclick="navigate('admin-bookings')">📝 จัดการการจอง</a>
+          <a href="#admin-rooms" class="block px-3 py-2 rounded-md font-medium text-crimson hover:bg-red-50" onclick="navigate('admin-rooms')">🏢 จัดการห้อง</a>
+        </div>
+        
+        <div class="border-t border-gray-200 mt-2 pt-3 pb-1 flex justify-center gap-2">
+          <button class="role-btn flex-1" id="roleUserMobile" onclick="setRole('user'); updateRoleButtons();">👤 User Mode</button>
+          <button class="role-btn flex-1" id="roleAdminMobile" onclick="setRole('admin'); updateRoleButtons();">🛡️ Admin Mode</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content (Injected by JS router) -->
+    <main class="flex-1 w-full pb-16" id="mainContent">
+      <!-- Content renders here -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-6 mt-auto">
+      <div class="container mx-auto px-4 text-center">
+        <p class="text-gray-500 text-sm">© 2024 Simple Booking System for Lab Room</p>
+        <p class="text-gray-400 text-xs mt-1">สาขาวิชาวิศวกรรมคอมพิวเตอร์ มหาวิทยาลัยกาฬสินธุ์</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal -->
+  <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 transition-opacity" id="modalOverlay" onclick="closeModal()"></div>
+  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-lg z-[101] hidden flex flex-col max-h-[90vh] overflow-hidden" id="modal">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+      <h3 class="font-bold text-lg text-gray-900" id="modalTitle">Title</h3>
+      <button class="text-gray-400 hover:text-crimson transition-colors p-1" onclick="closeModal()">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto" id="modalBody">Body</div>
+    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3" id="modalFooter"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/pages/home.js"></script>
+  <script src="js/pages/rooms.js"></script>
+  <script src="js/pages/room-detail.js"></script>
+  <script src="js/pages/booking-form.js"></script>
+  <script src="js/pages/my-bookings.js"></script>
+  <script src="js/pages/schedule.js"></script>
+  <script src="js/pages/admin.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/admin-rooms.js"></script>
+</body>
+</html>
