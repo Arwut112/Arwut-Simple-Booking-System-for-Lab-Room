@@ -9,22 +9,32 @@ function renderRooms() {
   const closed = rooms.filter(r => r.status === 'Closed').length;
 
   const roomCards = rooms.map(r => {
-    const bookings = getBookingsByRoom(r.id);
+    const bookings   = getBookingsByRoom(r.id);
     const activeCount = bookings.filter(b => b.status === 'Approved' || b.status === 'Pending').length;
-    const isBookable = r.status === 'Available';
+    const isBookable  = r.status === 'Available';
+
+    const imagePart = r.image_url
+      ? `<div class="relative w-full h-40 mb-4 rounded-xl overflow-hidden shadow-sm">
+           <img src="${r.image_url}" alt="${r.room_name}"
+                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+           <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+           <div class="absolute top-2 right-2">${roomStatusBadge(r.status)}</div>
+         </div>`
+      : `<div class="flex items-start justify-between mb-4">
+           <div class="room-icon-box text-2xl">${roomIcon(r.room_code)}</div>
+           ${roomStatusBadge(r.status)}
+         </div>`;
+
     return `
       <div class="card card-hover group animate-slide-up" data-room-id="${r.id}" data-status="${r.status}">
-        <div class="flex items-start justify-between mb-4">
-          <div class="room-icon-box text-2xl">${roomIcon(r.room_code)}</div>
-          ${roomStatusBadge(r.status)}
-        </div>
+        ${imagePart}
         <h3 class="font-bold text-gray-800 text-xl mb-1 group-hover:text-crimson transition-colors">${r.room_name}</h3>
         <p class="text-crimson font-semibold text-sm mb-1">${r.room_code}</p>
-        <p class="text-gray-500 text-sm mb-4">📍 ${r.location}</p>
+        <p class="text-gray-500 text-sm mb-4">\ud83d\udccd ${r.location}</p>
 
         <div class="flex items-center gap-4 text-sm text-gray-600 mb-4">
-          <span class="flex items-center gap-1">👥 <b>${r.capacity}</b> คน</span>
-          <span class="flex items-center gap-1" title="รวมรายการจองที่รออนุมัติและอนุมัติแล้ว">📋 <b>${activeCount}</b> คิวจอง</span>
+          <span class="flex items-center gap-1">\ud83d\udc65 <b>${r.capacity}</b> \u0e04\u0e19</span>
+          <span class="flex items-center gap-1" title="\u0e23\u0e27\u0e21\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e08\u0e2d\u0e07\u0e17\u0e35\u0e48\u0e23\u0e2d\u0e2d\u0e19\u0e38\u0e21\u0e31\u0e15\u0e34\u0e41\u0e25\u0e30\u0e2d\u0e19\u0e38\u0e21\u0e31\u0e15\u0e34\u0e41\u0e25\u0e49\u0e27">\ud83d\udccb <b>${activeCount}</b> \u0e04\u0e34\u0e27\u0e08\u0e2d\u0e07</span>
         </div>
 
         <div class="flex flex-wrap gap-1 mb-4">${equipmentChips(r.equipment)}</div>
@@ -33,11 +43,11 @@ function renderRooms() {
 
         <div class="flex gap-2">
           <button onclick="navigate('room','${r.id}')" class="btn-outline flex-1 text-sm">
-            🔍 รายละเอียด
+            \ud83d\udd0d \u0e23\u0e32\u0e22\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14
           </button>
           ${isBookable
-            ? `<button onclick="navigate('book','${r.id}')" class="btn-primary flex-1 text-sm">📅 จอง</button>`
-            : `<button class="btn-disabled flex-1 text-sm" disabled>🚫 ไม่สามารถจองได้</button>`
+            ? `<button onclick="navigate('book','${r.id}')" class="btn-primary flex-1 text-sm">\ud83d\udcc5 \u0e08\u0e2d\u0e07</button>`
+            : `<button class="btn-disabled flex-1 text-sm" disabled>\ud83d\udeab \u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e08\u0e2d\u0e07\u0e44\u0e14\u0e49</button>`
           }
         </div>
       </div>`;

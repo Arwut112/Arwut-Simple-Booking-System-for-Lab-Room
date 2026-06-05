@@ -1,0 +1,13 @@
+{
+  "name": "ce-lab-booking-system",
+  "version": "1.0.0",
+  "description": "ระบบจองห้องปฏิบัติการ สาขาวิชาวิศวกรรมคอมพิวเตอร์ มหาวิทยาลัยกาฬสินธุ์",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

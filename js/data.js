@@ -1,243 +1,227 @@
 /* ============================================================
-   data.js — LocalStorage Data Layer
+   data.js — API Data Layer (SQLite via Express backend)
    CE Lab Booking System | มหาวิทยาลัยกาฬสินธุ์
    ============================================================ */
 
-const STORAGE_KEYS = {
-  ROOMS: 'ceksu_rooms',
-  BOOKINGS: 'ceksu_bookings',
+/* ─── In-Memory Cache (โหลดจาก API แล้วเก็บไว้ใช้แบบ sync) ─── */
+const _cache = {
+  rooms: [],
+  bookings: [],
 };
 
-/* ─── Sample Rooms (from SRS Section 11) ─── */
-const SAMPLE_ROOMS = [
-  {
-    id: 'room-1',
-    room_name: 'Computer Engineering Lab 1',
-    room_code: 'CE-LAB-01',
-    location: 'อาคาร CE ชั้น 2 ห้อง 201',
-    capacity: 30,
-    equipment: 'Computer, Projector, Internet',
-    description: 'ห้องปฏิบัติการคอมพิวเตอร์หลัก มีเครื่องคอมพิวเตอร์ 30 เครื่อง โปรเจคเตอร์ความละเอียดสูง และอินเทอร์เน็ตความเร็วสูง เหมาะสำหรับสอนและสอบปฏิบัติการ',
-    status: 'Available',
-    created_at: '2024-01-01T08:00:00',
-  },
-  {
-    id: 'room-2',
-    room_name: 'Computer Engineering Lab 2',
-    room_code: 'CE-LAB-02',
-    location: 'อาคาร CE ชั้น 2 ห้อง 202',
-    capacity: 25,
-    equipment: 'Computer, Smart TV, Internet',
-    description: 'ห้องปฏิบัติการคอมพิวเตอร์ขนาดกลาง มี Smart TV 65 นิ้ว สำหรับนำเสนองาน และอินเทอร์เน็ตความเร็วสูง',
-    status: 'Available',
-    created_at: '2024-01-01T08:00:00',
-  },
-  {
-    id: 'room-3',
-    room_name: 'Network Laboratory',
-    room_code: 'NET-LAB',
-    location: 'อาคาร CE ชั้น 3 ห้อง 301',
-    capacity: 20,
-    equipment: 'Router, Switch, Network Cable, Rack',
-    description: 'ห้องปฏิบัติการระบบเครือข่าย พร้อมอุปกรณ์ Cisco Router, Managed Switch, Network Rack และสายเครือข่ายครบชุด',
-    status: 'Available',
-    created_at: '2024-01-01T08:00:00',
-  },
-  {
-    id: 'room-4',
-    room_name: 'IoT and Embedded Systems Lab',
-    room_code: 'IOT-LAB',
-    location: 'อาคาร CE ชั้น 3 ห้อง 302',
-    capacity: 20,
-    equipment: 'Arduino, ESP32, Sensor Kit, Oscilloscope',
-    description: 'ห้องปฏิบัติการ IoT และระบบฝังตัว มีชุด Arduino, ESP32, Sensor Kit หลากหลายประเภท และ Digital Oscilloscope',
-    status: 'Available',
-    created_at: '2024-01-01T08:00:00',
-  },
-  {
-    id: 'room-5',
-    room_name: 'Student Project Room',
-    room_code: 'PROJECT-ROOM',
-    location: 'อาคาร CE ชั้น 1 ห้อง 101',
-    capacity: 10,
-    equipment: 'Whiteboard, Meeting Table, Power Outlet',
-    description: 'ห้องสำหรับทำโปรเจกต์กลุ่ม มีกระดานไวท์บอร์ดขนาดใหญ่ โต๊ะประชุม และปลั๊กไฟครบทุกจุด',
-    status: 'Available',
-    created_at: '2024-01-01T08:00:00',
-  },
-];
-
-/* ─── Helper: Get Date Relative to Today ─── */
-function _dateOffset(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+/* ══════════════════════════════════════════════
+   LOAD ALL DATA FROM API (async)
+   เรียกก่อน render ทุกหน้า
+══════════════════════════════════════════════ */
+async function loadAllData() {
+  try {
+    const [roomsRes, bookingsRes] = await Promise.all([
+      fetch('/api/rooms'),
+      fetch('/api/bookings'),
+    ]);
+    _cache.rooms    = await roomsRes.json();
+    _cache.bookings = await bookingsRes.json();
+  } catch (err) {
+    console.error('❌ ไม่สามารถเชื่อมต่อ server ได้:', err);
+  }
 }
-
-/* ─── Sample Bookings ─── */
-const SAMPLE_BOOKINGS = [];
 
 /* ══════════════════════════════════════════════
-   ROOM OPERATIONS
+   ROOM OPERATIONS (sync — อ่านจาก cache)
 ══════════════════════════════════════════════ */
 function getRooms() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.ROOMS) || '[]');
-}
-
-function saveRooms(rooms) {
-  localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+  return _cache.rooms;
 }
 
 function getRoomById(id) {
-  return getRooms().find(r => r.id === id) || null;
-}
-
-function addRoom(data) {
-  const rooms = getRooms();
-  const room = {
-    ...data,
-    id: 'room-' + Date.now(),
-    created_at: new Date().toISOString(),
-  };
-  rooms.push(room);
-  saveRooms(rooms);
-  return room;
-}
-
-function updateRoom(id, data) {
-  const rooms = getRooms();
-  const idx = rooms.findIndex(r => r.id === id);
-  if (idx < 0) return null;
-  rooms[idx] = { ...rooms[idx], ...data };
-  saveRooms(rooms);
-  return rooms[idx];
-}
-
-function deleteRoom(id) {
-  saveRooms(getRooms().filter(r => r.id !== id));
+  return _cache.rooms.find(r => r.id === id) || null;
 }
 
 /* ══════════════════════════════════════════════
-   BOOKING OPERATIONS
+   BOOKING OPERATIONS (sync — อ่านจาก cache)
 ══════════════════════════════════════════════ */
 function getBookings() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
-}
-
-function saveBookings(bookings) {
-  localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
+  return _cache.bookings;
 }
 
 function getBookingById(id) {
-  return getBookings().find(b => b.id === id) || null;
+  return _cache.bookings.find(b => b.id === id) || null;
 }
 
 function getBookingsByEmail(email) {
-  return getBookings().filter(b =>
+  return _cache.bookings.filter(b =>
     b.requester_email.toLowerCase() === email.toLowerCase()
   );
 }
 
 function getBookingsByRoom(roomId) {
-  return getBookings().filter(b => b.room_id === roomId);
+  return _cache.bookings.filter(b => b.room_id === roomId);
 }
 
 /**
- * FR-07 — Overlap Detection (SRS Section 14)
- * Overlap occurs when: new_start < existing_end AND new_end > existing_start
- * Only checks against Approved bookings in the same room/date.
+ * FR-07 — Overlap Detection (ตรวจจาก cache)
  */
 function checkOverlap(roomId, date, startTime, endTime, excludeId = null) {
-  const bookings = getBookings().filter(b =>
+  return _cache.bookings.some(b =>
     b.room_id === roomId &&
     b.booking_date === date &&
     b.status === 'Approved' &&
-    b.id !== excludeId
+    b.id !== excludeId &&
+    startTime < b.end_time && endTime > b.start_time
   );
-  return bookings.some(b => startTime < b.end_time && endTime > b.start_time);
 }
 
-/**
- * Get conflicting booking details for error messages
- */
 function getConflictingBooking(roomId, date, startTime, endTime, excludeId = null) {
-  const bookings = getBookings().filter(b =>
+  return _cache.bookings.find(b =>
     b.room_id === roomId &&
     b.booking_date === date &&
     b.status === 'Approved' &&
-    b.id !== excludeId
-  );
-  return bookings.find(b => startTime < b.end_time && endTime > b.start_time) || null;
-}
-
-function addBooking(data) {
-  const bookings = getBookings();
-  const booking = {
-    ...data,
-    id: 'bk-' + Date.now(),
-    status: 'Pending',
-    admin_comment: '',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  bookings.push(booking);
-  saveBookings(bookings);
-  return booking;
-}
-
-function updateBookingStatus(id, status, comment = '') {
-  const bookings = getBookings();
-  const idx = bookings.findIndex(b => b.id === id);
-  if (idx < 0) return null;
-  bookings[idx].status = status;
-  bookings[idx].admin_comment = comment || bookings[idx].admin_comment;
-  bookings[idx].updated_at = new Date().toISOString();
-  saveBookings(bookings);
-  return bookings[idx];
+    b.id !== excludeId &&
+    startTime < b.end_time && endTime > b.start_time
+  ) || null;
 }
 
 /* ══════════════════════════════════════════════
-   DASHBOARD / STATS
+   DASHBOARD / STATS (sync — คำนวณจาก cache)
 ══════════════════════════════════════════════ */
 function getDashboardStats() {
-  const bookings = getBookings();
-  const rooms = getRooms();
+  const bookings = _cache.bookings;
+  const rooms    = _cache.rooms;
   const now = new Date().toISOString().split('T')[0];
 
   const byRoom = rooms.map(r => ({
     room_code: r.room_code,
     room_name: r.room_name,
-    total: bookings.filter(b => b.room_id === r.id).length,
+    total:    bookings.filter(b => b.room_id === r.id).length,
     approved: bookings.filter(b => b.room_id === r.id && b.status === 'Approved').length,
   }));
 
   return {
-    total: bookings.length,
-    pending: bookings.filter(b => b.status === 'Pending').length,
-    approved: bookings.filter(b => b.status === 'Approved').length,
-    rejected: bookings.filter(b => b.status === 'Rejected').length,
-    cancelled: bookings.filter(b => b.status === 'Cancelled').length,
-    today: bookings.filter(b => b.booking_date === now).length,
+    total:          bookings.length,
+    pending:        bookings.filter(b => b.status === 'Pending').length,
+    approved:       bookings.filter(b => b.status === 'Approved').length,
+    rejected:       bookings.filter(b => b.status === 'Rejected').length,
+    cancelled:      bookings.filter(b => b.status === 'Cancelled').length,
+    today:          bookings.filter(b => b.booking_date === now).length,
     byRoom,
-    rooms: rooms.length,
+    rooms:          rooms.length,
     availableRooms: rooms.filter(r => r.status === 'Available').length,
   };
 }
 
 /* ══════════════════════════════════════════════
-   INIT — Seed sample data if empty
+   API WRITE FUNCTIONS (async — บันทึกลง SQLite)
 ══════════════════════════════════════════════ */
-function initData() {
-  if (!localStorage.getItem(STORAGE_KEYS.ROOMS)) {
-    saveRooms(SAMPLE_ROOMS);
+
+/** เพิ่มการจองใหม่ — คืนค่า { ok, booking, conflict } */
+async function addBooking(data) {
+  const res = await fetch('/api/bookings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (res.status === 409) {
+    const body = await res.json();
+    return { ok: false, conflict: body.conflict };
   }
-  if (!localStorage.getItem(STORAGE_KEYS.BOOKINGS)) {
-    saveBookings(SAMPLE_BOOKINGS);
-  }
+  if (!res.ok) throw new Error('addBooking failed');
+  const booking = await res.json();
+  _cache.bookings.unshift(booking);
+  return { ok: true, booking };
 }
 
-function resetData() {
-  localStorage.removeItem(STORAGE_KEYS.ROOMS);
-  localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
-  initData();
+/** อัปเดตสถานะการจอง (Admin) — คืนค่า { ok, booking, conflict } */
+async function updateBookingStatus(id, status, comment = '') {
+  const res = await fetch(`/api/bookings/${id}/status`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, admin_comment: comment }),
+  });
+  if (res.status === 409) {
+    const body = await res.json();
+    return { ok: false, conflict: body.conflict };
+  }
+  if (!res.ok) throw new Error('updateBookingStatus failed');
+  const updated = await res.json();
+  const idx = _cache.bookings.findIndex(b => b.id === id);
+  if (idx >= 0) _cache.bookings[idx] = updated;
+  return { ok: true, booking: updated };
 }
+
+/** เพิ่มห้องใหม่ */
+async function addRoom(data) {
+  const res = await fetch('/api/rooms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('addRoom failed');
+  const room = await res.json();
+  _cache.rooms.push(room);
+  return room;
+}
+
+/** แก้ไขห้อง */
+async function updateRoom(id, data) {
+  const res = await fetch(`/api/rooms/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('updateRoom failed');
+  const room = await res.json();
+  const idx = _cache.rooms.findIndex(r => r.id === id);
+  if (idx >= 0) _cache.rooms[idx] = room;
+  return room;
+}
+
+/** ลบห้อง */
+async function deleteRoom(id) {
+  const res = await fetch(`/api/rooms/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('deleteRoom failed');
+  _cache.rooms = _cache.rooms.filter(r => r.id !== id);
+}
+
+/* ══════════════════════════════════════════════
+   INIT — เรียกจาก app.js ตอน boot
+══════════════════════════════════════════════ */
+async function initData() {
+  await loadAllData();
+}
+
+/** อัปโหลดรูปห้อง — รับ File object คืน image_url */
+async function uploadRoomImage(roomId, file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const res = await fetch(`/api/rooms/${roomId}/image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64: e.target.result, filename: file.name }),
+        });
+        if (!res.ok) throw new Error('upload failed');
+        const data = await res.json();
+        // อัปเดต cache
+        const idx = _cache.rooms.findIndex(r => r.id === roomId);
+        if (idx >= 0) _cache.rooms[idx].image_url = data.image_url;
+        resolve(data.image_url);
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/** ลบรูปห้อง */
+async function deleteRoomImage(roomId) {
+  const res = await fetch(`/api/rooms/${roomId}/image`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('delete image failed');
+  const idx = _cache.rooms.findIndex(r => r.id === roomId);
+  if (idx >= 0) _cache.rooms[idx].image_url = null;
+}
+
+/* ── Legacy stubs (ไม่ใช้แล้ว แต่เก็บไว้กัน error) ── */
+function saveRooms() {}
+function saveBookings() {}
+function resetData() { console.warn('resetData: ใช้ API แทน'); }

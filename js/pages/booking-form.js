@@ -125,16 +125,16 @@ function initBookingForm(roomId) {
   form._bookingSubmitHandler = handler;
 }
 
-function handleBookingSubmit(e, roomId, maxCapacity) {
+async function handleBookingSubmit(e, roomId, maxCapacity) {
   e.preventDefault();
 
-  const name = document.getElementById('bf_name').value.trim();
-  const email = document.getElementById('bf_email').value.trim();
-  const type = document.getElementById('bf_type').value;
-  const users = parseInt(document.getElementById('bf_users').value);
-  const date = document.getElementById('bf_date').value;
-  const start = document.getElementById('bf_start').value;
-  const end = document.getElementById('bf_end').value;
+  const name    = document.getElementById('bf_name').value.trim();
+  const email   = document.getElementById('bf_email').value.trim();
+  const type    = document.getElementById('bf_type').value;
+  const users   = parseInt(document.getElementById('bf_users').value);
+  const date    = document.getElementById('bf_date').value;
+  const start   = document.getElementById('bf_start').value;
+  const end     = document.getElementById('bf_end').value;
   const purpose = document.getElementById('bf_purpose').value.trim();
 
   const alertBox = document.getElementById('bookingAlert');
@@ -155,25 +155,35 @@ function handleBookingSubmit(e, roomId, maxCapacity) {
     return showError('เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด');
   }
 
-  // 2. Validate Overlap (FR-07)
-  const conflict = getConflictingBooking(roomId, date, start, end);
-  if (conflict) {
-    return showError(`เวลาที่เลือกซ้ำซ้อนกับการจองอื่น: <br>มีผู้จองแล้วเวลา <b>${conflict.start_time} - ${conflict.end_time}</b>`);
+  // เปลี่ยน submit เป็น loading state
+  const submitBtn = e.target.querySelector('[type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ กำลังบันทึก...'; }
+
+  try {
+    // 2. บันทึกลง SQLite (พร้อมตรวจ overlap ฝั่ง server)
+    const result = await addBooking({
+      room_id:         roomId,
+      requester_name:  name,
+      requester_email: email,
+      requester_type:  type,
+      booking_date:    date,
+      start_time:      start,
+      end_time:        end,
+      purpose:         purpose,
+      number_of_users: users,
+    });
+
+    if (!result.ok) {
+      // overlap conflict
+      return showError(`เวลาที่เลือกซ้ำซ้อนกับการจองอื่น: <br>มีผู้จองแล้วเวลา <b>${result.conflict.start_time} - ${result.conflict.end_time}</b>`);
+    }
+
+    showToast('ส่งคำขอจองสำเร็จ! กรุณารอการอนุมัติ', 'success');
+    navigate('my-bookings');
+  } catch (err) {
+    showError('เกิดข้อผิดพลาด กรุณาลองใหม่');
+    console.error(err);
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 ยืนยันการจอง'; }
   }
-
-  // 3. Save Booking (FR-08)
-  addBooking({
-    room_id: roomId,
-    requester_name: name,
-    requester_email: email,
-    requester_type: type,
-    booking_date: date,
-    start_time: start,
-    end_time: end,
-    purpose: purpose,
-    number_of_users: users
-  });
-
-  showToast('ส่งคำขอจองสำเร็จ! กรุณารอการอนุมัติ', 'success');
-  navigate('my-bookings');
 }

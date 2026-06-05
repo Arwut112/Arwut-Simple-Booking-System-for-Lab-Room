@@ -6,17 +6,20 @@
 let currentRole = 'user';
 
 /* ─── Init ─── */
-function init() {
-  initData();
+async function init() {
+  await initData();
   currentRole = localStorage.getItem('ceksu_role') || 'user';
   updateRoleButtons();
   updateAdminNavLinks();
-  window.addEventListener('hashchange', router);
-  router();
+  window.addEventListener('hashchange', () => router());
+  await router();
 }
 
 /* ─── Router (Hash-based SPA) ─── */
-function router() {
+async function router() {
+  // โหลดข้อมูลล่าสุดจาก SQLite ก่อน render
+  await loadAllData();
+
   const hash = window.location.hash.replace('#', '') || 'home';
   const parts = hash.split('/');
   const page = parts[0];

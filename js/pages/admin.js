@@ -58,22 +58,29 @@ function renderAdminBookings() {
 
     content = `
       <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-white p-4 rounded shadow-sm border border-gray-100">
-        <div class="flex items-center gap-2">
-          <span class="text-gray-600 text-sm font-bold">สถานะ:</span>
-          <select id="filterStatus" class="form-input py-1 text-sm w-auto" onchange="filterAdminBookings()">
-            <option value="all">ทั้งหมด</option>
-            <option value="Pending">⏳ Pending</option>
-            <option value="Approved">✅ Approved</option>
-            <option value="Rejected">❌ Rejected</option>
-            <option value="Cancelled">🚫 Cancelled</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-gray-600 text-sm font-bold">ห้อง:</span>
-          <select id="filterRoom" class="form-input py-1 text-sm w-auto max-w-[200px]" onchange="filterAdminBookings()">
-            <option value="all">ทุกห้อง</option>
-            ${rooms.map(r => `<option value="${r.id}">${r.room_code}</option>`).join('')}
-          </select>
+        <div class="flex flex-wrap items-center gap-4 w-full">
+          <!-- Text Search -->
+          <div class="flex-1 min-w-[200px]">
+            <input type="text" id="searchBooking" class="form-input text-sm py-1.5" placeholder="🔍 ค้นหาผู้จอง, อีเมล..." onkeyup="filterAdminBookings()">
+          </div>
+          <!-- Filters -->
+          <div class="flex items-center gap-2">
+            <span class="text-gray-600 text-sm font-bold">\u0e2a\u0e16\u0e32\u0e19\u0e30:</span>
+            <select id="filterStatus" class="form-input py-1.5 text-sm w-auto" onchange="filterAdminBookings()">
+              <option value="all">\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14</option>
+              <option value="Pending">\u23f3 Pending</option>
+              <option value="Approved">\u2705 Approved</option>
+              <option value="Rejected">\u274c Rejected</option>
+              <option value="Cancelled">\ud83d\udeab Cancelled</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-gray-600 text-sm font-bold">\u0e2b\u0e49\u0e2d\u0e07:</span>
+            <select id="filterRoom" class="form-input py-1.5 text-sm w-auto max-w-[200px]" onchange="filterAdminBookings()">
+              <option value="all">\u0e17\u0e38\u0e01\u0e2b\u0e49\u0e2d\u0e07</option>
+              ${rooms.map(r => `<option value="${r.id}">${r.room_code}</option>`).join('')}
+            </select>
+          </div>
         </div>
       </div>
       
@@ -109,16 +116,20 @@ function initAdminBookings() {}
 function filterAdminBookings() {
   const statusFilter = document.getElementById('filterStatus')?.value || 'all';
   const roomFilter = document.getElementById('filterRoom')?.value || 'all';
+  const searchText = (document.getElementById('searchBooking')?.value || '').toLowerCase();
   
   const rows = document.querySelectorAll('#adminBookingTbody tr');
   rows.forEach(row => {
     const s = row.dataset.status;
     const r = row.dataset.room;
+    // Get text content of the whole row for searching
+    const textContent = row.textContent.toLowerCase();
     
     const statusMatch = statusFilter === 'all' || s === statusFilter;
     const roomMatch = roomFilter === 'all' || r === roomFilter;
+    const searchMatch = !searchText || textContent.includes(searchText);
     
-    if (statusMatch && roomMatch) {
+    if (statusMatch && roomMatch && searchMatch) {
       row.style.display = '';
     } else {
       row.style.display = 'none';
@@ -165,7 +176,7 @@ function adminCancel(id) {
   );
 }
 
-function executeAction(id, status, requireComment = false) {
+async function executeAction(id, status, requireComment = false) {
   const commentInput = document.getElementById('adminComment');
   const comment = commentInput ? commentInput.value.trim() : '';
   
@@ -173,9 +184,20 @@ function executeAction(id, status, requireComment = false) {
     alert('กรุณาระบุเหตุผล/หมายเหตุ');
     return;
   }
-  
-  updateBookingStatus(id, status, comment);
-  closeModal();
-  showToast(`เปลี่ยนสถานะเป็น ${status} สำเร็จ`, 'success');
-  router(); // refresh view
+
+  try {
+    const result = await updateBookingStatus(id, status, comment);
+    if (!result.ok) {
+      closeModal();
+      showToast(`ไม่สามารถอนุมัติได้! เวลาซ้ำซ้อนกับการจองอื่น (${result.conflict.start_time} - ${result.conflict.end_time})`, 'error');
+      return;
+    }
+    closeModal();
+    showToast(`เปลี่ยนสถานะเป็น ${status} สำเร็จ`, 'success');
+    router(); // refresh view
+  } catch (err) {
+    closeModal();
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+    console.error(err);
+  }
 }

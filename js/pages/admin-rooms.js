@@ -20,6 +20,12 @@ function renderAdminRooms() {
         <div class="text-sm">👥 ${r.capacity} คน</div>
         <div class="text-xs text-gray-500 truncate max-w-[150px]" title="${r.location}">📍 ${r.location}</div>
       </td>
+      <td class="table-cell hidden lg:table-cell text-center">
+        ${r.image_url
+          ? `<img src="${r.image_url}" alt="รูปห้อง" class="w-16 h-12 object-cover rounded-lg mx-auto shadow-sm border border-gray-200">`
+          : `<span class="text-gray-300 text-xs">ไม่มีรูป</span>`
+        }
+      </td>
       <td class="table-cell text-center">
         ${roomStatusBadge(r.status)}
       </td>
@@ -45,6 +51,7 @@ function renderAdminRooms() {
               <tr>
                 <th class="table-th">ชื่อห้อง / รหัสห้อง</th>
                 <th class="table-th hidden md:table-cell">ความจุ / สถานที่</th>
+                <th class="table-th hidden lg:table-cell text-center">รูปห้อง</th>
                 <th class="table-th text-center">สถานะ</th>
                 <th class="table-th text-center w-24">จัดการ</th>
               </tr>
@@ -62,7 +69,8 @@ function renderAdminRooms() {
 function initAdminRooms() {}
 
 function getRoomFormHtml(room = null) {
-  const isEdit = !!room;
+  const isEdit   = !!room;
+  const imgUrl   = isEdit && room.image_url ? room.image_url : null;
   return `
     <form id="adminRoomForm" onsubmit="handleRoomSubmit(event, '${isEdit ? room.id : ''}')" class="space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -106,6 +114,24 @@ function getRoomFormHtml(room = null) {
         <textarea id="r_desc" class="form-input text-sm h-20">${isEdit ? room.description : ''}</textarea>
       </div>
 
+      ${isEdit ? `
+      <!-- อัปโหลดรูปห้อง -->
+      <div class="form-group mb-0 border border-gray-200 rounded-lg p-3 bg-gray-50">
+        <label class="form-label text-xs">🖼️ รูปภาพห้อง</label>
+        <div id="imgPreviewBox" class="mt-2 mb-3 ${imgUrl ? '' : 'hidden'}">
+          <img id="imgPreview" src="${imgUrl || ''}" alt="รูปห้อง"
+               class="w-full max-h-40 object-cover rounded-lg border border-gray-200 shadow-sm">
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <label for="r_image" class="btn-outline text-xs py-1.5 px-3 cursor-pointer flex items-center gap-1">
+            📤 เลือกรูป
+          </label>
+          <input type="file" id="r_image" accept="image/*" class="hidden" onchange="previewRoomImage(event, '${room.id}')">
+          ${imgUrl ? `<button type="button" onclick="removeRoomImage('${room.id}')" class="btn-outline text-xs py-1.5 px-3 text-red-500 border-red-300 hover:bg-red-50">🗑️ ลบรูป</button>` : ''}
+        </div>
+        <p class="text-xs text-gray-400 mt-2">รองรับ: JPG, PNG, WEBP (max 5MB)</p>
+      </div>` : ''}
+
       <div class="flex gap-3 pt-4 border-t border-gray-100 mt-6">
         <button type="button" onclick="closeModal()" class="btn-outline flex-1 text-sm py-2">ยกเลิก</button>
         <button type="submit" class="btn-primary flex-1 text-sm py-2">${isEdit ? '💾 บันทึกการแก้ไข' : '➕ เพิ่มห้อง'}</button>
@@ -113,6 +139,7 @@ function getRoomFormHtml(room = null) {
     </form>
   `;
 }
+
 
 function createNewRoom() {
   openModal('เพิ่มห้องปฏิบัติการใหม่', getRoomFormHtml());
@@ -124,29 +151,42 @@ function editRoom(id) {
   openModal('แก้ไขข้อมูลห้องปฏิบัติการ', getRoomFormHtml(room));
 }
 
-function handleRoomSubmit(e, roomId) {
+async function handleRoomSubmit(e, roomId) {
   e.preventDefault();
-  
+
   const data = {
-    room_name: document.getElementById('r_name').value.trim(),
-    room_code: document.getElementById('r_code').value.trim(),
-    capacity: parseInt(document.getElementById('r_cap').value),
-    status: document.getElementById('r_status').value,
-    location: document.getElementById('r_loc').value.trim(),
-    equipment: document.getElementById('r_equip').value.trim(),
+    room_name:   document.getElementById('r_name').value.trim(),
+    room_code:   document.getElementById('r_code').value.trim(),
+    capacity:    parseInt(document.getElementById('r_cap').value),
+    status:      document.getElementById('r_status').value,
+    location:    document.getElementById('r_loc').value.trim(),
+    equipment:   document.getElementById('r_equip').value.trim(),
     description: document.getElementById('r_desc').value.trim()
   };
 
-  if (roomId) {
-    updateRoom(roomId, data);
-    showToast('บันทึกข้อมูลห้องสำเร็จ', 'success');
-  } else {
-    addRoom(data);
-    showToast('เพิ่มห้องปฏิบัติการสำเร็จ', 'success');
+  const submitBtn = e.target.querySelector('[type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ กำลังบันทึก...'; }
+
+  try {
+    if (roomId) {
+      await updateRoom(roomId, data);
+      closeModal();
+      showToast('\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e2b\u0e49\u0e2d\u0e07\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+    } else {
+      await addRoom(data);
+      closeModal();
+      showToast('\u0e40\u0e1e\u0e34\u0e48\u0e21\u0e2b\u0e49\u0e2d\u0e07\u0e1b\u0e0f\u0e34\u0e1a\u0e31\u0e15\u0e34\u0e01\u0e32\u0e23\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+    }
+    router(); // refresh
+  } catch (err) {
+    if (err.message.includes('409')) {
+      showToast('\u0e23\u0e2b\u0e31\u0e2a\u0e2b\u0e49\u0e2d\u0e07\u0e19\u0e35\u0e49\u0e21\u0e35\u0e2d\u0e22\u0e39\u0e48\u0e41\u0e25\u0e49\u0e27 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e23\u0e2b\u0e31\u0e2a\u0e2b\u0e49\u0e2d\u0e07', 'error');
+    } else {
+      showToast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14\u0e43\u0e19\u0e01\u0e32\u0e23\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e15\u0e48\u0e2d\u0e01\u0e31\u0e1a Server', 'error');
+    }
+    console.error(err);
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = roomId ? '\ud83d\udcbe \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e01\u0e32\u0e23\u0e41\u0e01\u0e49\u0e44\u0e02' : '\u2795 \u0e40\u0e1e\u0e34\u0e48\u0e21\u0e2b\u0e49\u0e2d\u0e07'; }
   }
-  
-  closeModal();
-  router(); // refresh
 }
 
 function confirmDeleteRoom(id) {
@@ -178,9 +218,68 @@ function confirmDeleteRoom(id) {
   );
 }
 
-function executeDeleteRoom(id) {
-  deleteRoom(id);
-  closeModal();
-  showToast('ลบห้องปฏิบัติการสำเร็จ', 'success');
-  router(); // refresh
+async function executeDeleteRoom(id) {
+  try {
+    await deleteRoom(id);
+    closeModal();
+    showToast('\u0e25\u0e1a\u0e2b\u0e49\u0e2d\u0e07\u0e1b\u0e0f\u0e34\u0e1a\u0e31\u0e15\u0e34\u0e01\u0e32\u0e23\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+    router(); // refresh
+  } catch (err) {
+    closeModal();
+    showToast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48', 'error');
+    console.error(err);
+  }
+}
+
+/* ── Image Upload Handlers ── */
+
+/** \u0e41\u0e2a\u0e14\u0e07 preview \u0e41\u0e25\u0e30\u0e2d\u0e31\u0e1b\u0e42\u0e2b\u0e25\u0e14\u0e23\u0e39\u0e1b\u0e17\u0e31\u0e19\u0e17\u0e35\u0e17\u0e35\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e44\u0e1f\u0e25\u0e4c */
+async function previewRoomImage(event, roomId) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // \u0e15\u0e23\u0e27\u0e08\u0e02\u0e19\u0e32\u0e14\u0e44\u0e1f\u0e25\u0e4c
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('\u0e23\u0e39\u0e1b\u0e43\u0e2b\u0e0d\u0e48\u0e40\u0e01\u0e34\u0e19\u0e44\u0e1b (max 5MB)', 'error');
+    event.target.value = '';
+    return;
+  }
+
+  // \u0e41\u0e2a\u0e14\u0e07 preview \u0e01\u0e48\u0e2d\u0e19
+  const previewBox = document.getElementById('imgPreviewBox');
+  const previewImg = document.getElementById('imgPreview');
+  if (previewBox && previewImg) {
+    previewImg.src = URL.createObjectURL(file);
+    previewBox.classList.remove('hidden');
+  }
+
+  // \u0e2d\u0e31\u0e1b\u0e42\u0e2b\u0e25\u0e14\u0e44\u0e1b server
+  const label = event.target.previousElementSibling;
+  if (label) label.textContent = '\u23f3 \u0e01\u0e33\u0e25\u0e31\u0e07\u0e2d\u0e31\u0e1b\u0e42\u0e2b\u0e25\u0e14...';
+
+  try {
+    const imageUrl = await uploadRoomImage(roomId, file);
+    showToast('\u0e2d\u0e31\u0e1b\u0e42\u0e2b\u0e25\u0e14\u0e23\u0e39\u0e1b\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 \u2705', 'success');
+    // \u0e2d\u0e31\u0e1b\u0e40\u0e14\u0e15 preview \u0e14\u0e49\u0e27\u0e22 URL \u0e08\u0e23\u0e34\u0e07
+    if (previewImg) previewImg.src = imageUrl;
+    if (label) label.textContent = '\ud83d\udce4 \u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e23\u0e39\u0e1b';
+  } catch (err) {
+    showToast('\u0e2d\u0e31\u0e1b\u0e42\u0e2b\u0e25\u0e14\u0e23\u0e39\u0e1b\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48', 'error');
+    if (label) label.textContent = '\ud83d\udce4 \u0e40\u0e25\u0e37\u0e2d\u0e01\u0e23\u0e39\u0e1b';
+    console.error(err);
+  }
+}
+
+/** \u0e25\u0e1a\u0e23\u0e39\u0e1b\u0e2b\u0e49\u0e2d\u0e07 */
+async function removeRoomImage(roomId) {
+  if (!confirm('\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e25\u0e1a\u0e23\u0e39\u0e1b\u0e2b\u0e49\u0e2d\u0e07\u0e19\u0e35\u0e49\u0e43\u0e0a\u0e48\u0e2b\u0e23\u0e37\u0e2d\u0e44\u0e21\u0e48?')) return;
+  try {
+    await deleteRoomImage(roomId);
+    showToast('\u0e25\u0e1a\u0e23\u0e39\u0e1b\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+    closeModal();
+    router();
+  } catch (err) {
+    showToast('\u0e25\u0e1a\u0e23\u0e39\u0e1b\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48', 'error');
+    console.error(err);
+  }
 }

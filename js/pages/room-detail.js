@@ -29,8 +29,8 @@ function renderRoomDetail(id) {
     <!-- Breadcrumb -->
     <div class="container pt-8">
       <nav class="breadcrumb">
-        <a href="#rooms" onclick="navigate('rooms')" class="breadcrumb-link">🏢 ห้องปฏิบัติการ</a>
-        <span class="breadcrumb-sep">›</span>
+        <a href="#rooms" onclick="navigate('rooms')" class="breadcrumb-link">\ud83c\udfe2 \u0e2b\u0e49\u0e2d\u0e07\u0e1b\u0e0f\u0e34\u0e1a\u0e31\u0e15\u0e34\u0e01\u0e32\u0e23</a>
+        <span class="breadcrumb-sep">\u203a</span>
         <span class="text-gray-700">${room.room_code}</span>
       </nav>
     </div>
@@ -39,27 +39,44 @@ function renderRoomDetail(id) {
       <div class="detail-grid">
         <!-- Left: Room Info -->
         <div class="space-y-6">
-          <!-- Main Info Card -->
-          <div class="card">
-            <div class="flex items-start justify-between mb-4">
-              <div class="room-icon-box-lg">${roomIcon(room.room_code)}</div>
-              ${roomStatusBadge(room.status)}
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900 mb-1">${room.room_name}</h1>
-            <p class="text-crimson font-bold text-lg mb-4">${room.room_code}</p>
-
-            <div class="info-rows">
-              <div class="info-row">
-                <span class="info-label">📍 สถานที่</span>
-                <span class="info-value">${room.location}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">👥 ความจุ</span>
-                <span class="info-value font-semibold">${room.capacity} คน</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">📅 เพิ่มเมื่อ</span>
-                <span class="info-value">${formatDateTime(room.created_at)}</span>
+          <!-- Hero Image or Icon Card -->
+          <div class="card overflow-hidden p-0">
+            ${room.image_url
+              ? `<div class="relative w-full h-56 overflow-hidden">
+                   <img src="${room.image_url}" alt="${room.room_name}"
+                        class="w-full h-full object-cover">
+                   <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                   <div class="absolute bottom-4 left-4 flex items-center gap-2">
+                     <span class="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1 text-lg font-bold text-gray-900">${room.room_code}</span>
+                     ${roomStatusBadge(room.status)}
+                   </div>
+                 </div>
+                 <div class="p-6 pb-4">
+                   <h1 class="text-2xl font-bold text-gray-900 mb-1">${room.room_name}</h1>
+                 </div>`
+              : `<div class="p-6">
+                   <div class="flex items-start justify-between mb-4">
+                     <div class="room-icon-box-lg">${roomIcon(room.room_code)}</div>
+                     ${roomStatusBadge(room.status)}
+                   </div>
+                   <h1 class="text-2xl font-bold text-gray-900 mb-1">${room.room_name}</h1>
+                   <p class="text-crimson font-bold text-lg mb-4">${room.room_code}</p>
+                 </div>`
+            }
+            <div class="px-6 pb-6">
+              <div class="info-rows">
+                <div class="info-row">
+                  <span class="info-label">\ud83d\udccd \u0e2a\u0e16\u0e32\u0e19\u0e17\u0e35\u0e48</span>
+                  <span class="info-value">${room.location}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">\ud83d\udc65 \u0e04\u0e27\u0e32\u0e21\u0e08\u0e38</span>
+                  <span class="info-value font-semibold">${room.capacity} \u0e04\u0e19</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">\ud83d\udcc5 \u0e40\u0e1e\u0e34\u0e48\u0e21\u0e40\u0e21\u0e37\u0e48\u0e2d</span>
+                  <span class="info-value">${formatDateTime(room.created_at)}</span>
+                </div>
               </div>
             </div>
           </div>
